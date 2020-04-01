@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<!-- 加载db.properties文件 -->
+	<bean id="properties" class="org.springframework.beans.factory.config.PreferencesPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:db.properties</value>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- 第一步：数据源 -->
+	<!-- 配置数据库信息（替代Mybatis配置文件：conf.xml） -->
+	<bean id="pooledDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		 <property name="jdbcUrl" value="${jdbc.jdbcUrl}"/>
+		 <property name="driverClass" value="${jdbc.driverClassName}"/>
+		 <property name="user" value="${jdbc.username}"/>
+		 <property name="password" value="${jdbc.password}"/>
+	</bean>
+	
+	<!-- 第二步：mapper.xml -->
+	
+	<!-- 在springioc容器中创建Mybatis的核心类 SqlSessionFacotry  -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="pooledDataSource"/>
+		<!-- 加载Mybatis配置文件conf.xml -->
+		<property name="configLocation" value="classpath:conf.xml"/>
+		<!-- 加载mapper.xml路径 -->
+		<property name="mapperLocations" value="classpath:cn/ny/mapper/*.xml"></property>
+	</bean>
+	
+	<!-- 第三种方式生成mapper对象
+		批量产生mapper对象在springioc的id值 默认就是接口名（接口名首字母必须小写）
+	 -->
+	 <!-- 将Mybatis的sqlSessionFactory交给spring -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+		<!-- 指定批量产生 哪个包中的mapper对象 -->
+		<property name="basePackage" value="cn.ny.mapper"></property>
+	</bean>
+	
+	<!-- 配置一个可以执行批量的sqlSession -->
+	<bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg name="sqlSessionFactory" ref="sqlSessionFactory"></constructor-arg>
+		<constructor-arg name="executorType" value="BATCH"></constructor-arg>
+	</bean>
+	
+	<!-- 事务控制的配置 --><!-- ———————————连接线的一方————————— -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<!-- 控制住数据源 -->
+		<property name="dataSource" ref="pooledDataSource"></property>
+	</bean>
+	<!-- 开启基于注解的事务，使用xml配置形式的事务（比较主要的都是使用配置式） -->
+	<aop:config>
+		<!-- ———————————连接线的另一方————————— -->
+		<aop:pointcut expression="execution(* cn.ny.service..*(..))" id="poioncut"/>
+		<!-- ———————————连接线————————— -->
+		<aop:advisor pointcut-ref="poioncut" advice-ref="logException"/>
+	</aop:config>
+	<!-- 配置事务增强，事务如何切入 -->
+	<tx:advice id="logException" transaction-manager="transactionManager">
+		<tx:attributes>
+			<!-- 所有方法都是事务方法 -->
+			<tx:method name="*"/>
+			<!-- 以get开始的所有方法 -->
+			<tx:method name="get*" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	
+	
+</beans>
