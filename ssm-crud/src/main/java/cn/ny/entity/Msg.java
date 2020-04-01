@@ -2,7 +2,7 @@ package cn.ny.entity;
 
 import java.util.HashMap;
 import java.util.Map;
-
+//123
 /**
  * 通用的返回的类
  * @author Administrator
