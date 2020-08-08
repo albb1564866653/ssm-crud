@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 /**
  * 通用的返回的类
- * @ cjh
+ * 
  *
  */
 public class Msg {
